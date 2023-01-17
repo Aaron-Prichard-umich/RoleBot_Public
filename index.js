@@ -20,7 +20,11 @@ client.on("messageCreate", (message) => {
         message.channel.send("Test passed");
     }
     if(command === "makech"){
-        Guild.channels.create('new-general')
+        Guild.channels.create({
+            name: "hello", 
+            type: ChannelType.GuildText,
+            parent: cat[0].ID
+        });
     }
 })
 

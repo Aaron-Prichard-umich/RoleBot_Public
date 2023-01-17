@@ -1,5 +1,6 @@
 const { Client, GatewayIntentBits, EmbedBuilder, PermissionsBitField, Permissions } = require(`discord.js`);
 const prefix = '!';
+const config = require('./config.json');
 const client = new Client({
     intents: [
         GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent]
@@ -20,4 +21,4 @@ client.on("messageCreate", (message) => {
     }
 })
 
-client.login("MTA2MzEzNjk3NTIyMzI1OTEzNg.GamUTh.JQkzLpVdExbkj8TWDZ354CevsKnPPnvEh5M994")
+client.login(config.token);

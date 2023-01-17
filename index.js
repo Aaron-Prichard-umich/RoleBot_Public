@@ -1,4 +1,4 @@
-const { Client, GatewayIntentBits, EmbedBuilder, PermissionsBitField, Permissions } = require(`discord.js`);
+const { Client, GatewayIntentBits, EmbedBuilder, PermissionsBitField, Permissions, Guild } = require(`discord.js`);
 const prefix = '!';
 const config = require('./config.json');
 const client = new Client({
@@ -18,6 +18,9 @@ client.on("messageCreate", (message) => {
     const command = args.shift().toLowerCase();
     if(command === "test"){
         message.channel.send("Test passed");
+    }
+    if(command === "makech"){
+        Guild.channels.create('new-general')
     }
 })
 

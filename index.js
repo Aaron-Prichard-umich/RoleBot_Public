@@ -1,3 +1,12 @@
+/*
+Project Desc: Discord Bot to assist in managing roles and channels for students to access the appropriate information channels for their courses. 
+(OOP Project for CSC 325)
+Developer: Aaron Prichard
+Current ToDo:
+get bot to interact with messages in testing server: :)
+implement create channel command: :(
+implement create role command: :(
+*/
 const { Client, GatewayIntentBits, EmbedBuilder, PermissionsBitField, Permissions, Guild } = require(`discord.js`);
 const prefix = '!';
 const config = require('./config.json');
@@ -19,8 +28,8 @@ client.on("messageCreate", (message) => {
     if(command === "test"){
         message.channel.send("Test passed");
     }
-    if(command === "makech"){
-        Guild.channels.create({
+    if(command === "makech"){ //Currently non-functioning. Have yet to reference documentation for discord.js v14 channel creation.
+        Guild.channels.create({ 
             name: "hello", 
             type: ChannelType.GuildText,
             parent: cat[0].ID

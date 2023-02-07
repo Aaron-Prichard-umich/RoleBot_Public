@@ -31,9 +31,22 @@ client.on("messageCreate", (message) => {
     }
     if(command === "makecourse"){ 
         try{
-            message.guild.channels.create({ 
+            const newCat = message.guild.channels.create({  //part of todo for setting category
                 name: name, 
                 type: ChannelType.GuildCategory,
+            });
+            message.guild.channels.create({ 
+                name: "Announcements-" + name, 
+                type: ChannelType.GuildText,
+                category: newCat, //part of todo for setting category
+            });
+            message.guild.channels.create({ 
+                name: "zoom-meeting-info-" + name, 
+                type: ChannelType.GuildText,
+            });
+            message.guild.channels.create({ 
+                name: "chat " + name, 
+                type: ChannelType.GuildText,
             });
             message.channel.send("Group created for " + name + "🫡");
         }

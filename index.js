@@ -25,16 +25,17 @@ client.on("messageCreate", (message) => {
 
     const args = message.content.slice(prefix.length).split(/ +/);
     const command = args.shift().toLowerCase();
+    const name = args.shift();
     if(command === "test"){
         message.channel.send("Test passed");
     }
-    if(command === "makech"){ 
+    if(command === "makecourse"){ 
         try{
             message.guild.channels.create({ 
-                name: "botCat", 
+                name: name, 
                 type: ChannelType.GuildCategory,
             });
-            message.channel.send("Category created for botCat 🫡");
+            message.channel.send("Group created for " + name + "🫡");
         }
         catch (e){
             message.channel.send("Could not Create Channel");

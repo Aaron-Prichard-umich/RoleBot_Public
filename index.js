@@ -7,7 +7,7 @@ get bot to interact with messages in testing server: :)
 implement create channel command: :)
 implement role assignment poll: :(
 */
-const { Client, GatewayIntentBits, EmbedBuilder, PermissionsBitField, Permissions, Guild, ChannelType } = require(`discord.js`);
+const { Client, GatewayIntentBits, EmbedBuilder, PermissionsBitField, Permissions, Guild, ChannelType, ActivityType } = require(`discord.js`);
 const prefix = '!';
 const config = require('./config.json');
 const client = new Client({
@@ -17,7 +17,7 @@ const client = new Client({
 
 client.on("ready", () => {
     console.log("Role Bot is online!");
-    client.user.setActivity('Beep Boop');
+    client.user.setActivity('Beep Boop', {type: ActivityType.Listening});
 })
 
 client.on("messageCreate", (message) => {

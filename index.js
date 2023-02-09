@@ -4,8 +4,8 @@ Project Desc: Discord Bot to assist in managing roles and channels for students 
 Developer: Aaron Prichard
 Current ToDo:
 get bot to interact with messages in testing server: :)
-implement create channel command: :(
-implement create role command: :(
+implement create channel command: :)
+implement role assignment poll: :(
 */
 const { Client, GatewayIntentBits, EmbedBuilder, PermissionsBitField, Permissions, Guild, ChannelType } = require(`discord.js`);
 const prefix = '!';
@@ -31,28 +31,34 @@ client.on("messageCreate", (message) => {
     }
     if(command === "makecourse"){ 
         try{
-            const newCat = message.guild.channels.create({  //part of todo for setting category
+            const newCat = message.guild.channels.create({  
                 name: name, 
                 type: ChannelType.GuildCategory,
+            }).then((channel) =>{
+
+                message.guild.channels.create({ 
+                    name: "Announcements-" + name, 
+                    type: ChannelType.GuildText,
+                    parent: channel,
+                })
+
+                message.guild.channels.create({ 
+                    name: "zoom-meeting-info-" + name, 
+                    type: ChannelType.GuildText,
+                    parent: channel,
+                });
+    
+                message.guild.channels.create({ 
+                    name: "chat " + name, 
+                    type: ChannelType.GuildText,
+                    parent: channel,
+                });
             });
-            message.guild.channels.create({ 
-                name: "Announcements-" + name, 
-                type: ChannelType.GuildText,
-                category: newCat, //part of todo for setting category
-            });
-            message.guild.channels.create({ 
-                name: "zoom-meeting-info-" + name, 
-                type: ChannelType.GuildText,
-            });
-            message.guild.channels.create({ 
-                name: "chat " + name, 
-                type: ChannelType.GuildText,
-            });
-            message.channel.send("Group created for " + name + "🫡");
+            message.channel.send("Group created for " + name + " 🫡");
         }
         catch (e){
             message.channel.send("Could not Create Channel");
-            message.channel.send("e");
+            message.channel.send("error " + e);
         }
     }
 })

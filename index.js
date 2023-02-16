@@ -31,28 +31,13 @@ client.on("messageCreate", (message) => {
     }
     if(command === "makecourse"){ 
         try{
-            const newCat = message.guild.channels.create({  
+            const newCat = message.guild.channels.create({  //create category/course grouping from second argument of makecourse command
                 name: name, 
                 type: ChannelType.GuildCategory,
             }).then((channel) =>{
-
-                message.guild.channels.create({ 
-                    name: "Announcements-" + name, 
-                    type: ChannelType.GuildText,
-                    parent: channel,
-                })
-
-                message.guild.channels.create({ 
-                    name: "zoom-meeting-info-" + name, 
-                    type: ChannelType.GuildText,
-                    parent: channel,
-                });
-    
-                message.guild.channels.create({ 
-                    name: "chat " + name, 
-                    type: ChannelType.GuildText,
-                    parent: channel,
-                });
+                makeCourse("Announcements-" + name, ChannelType.GuildText, message, channel);  //populate with standard channels
+                makeCourse("zoom-meeting-info-" + name, ChannelType.GuildText, message, channel);
+                makeCourse("chat " + name, ChannelType.GuildText, message, channel);
             });
             message.channel.send("Group created for " + name + " 🫡");
         }
@@ -62,5 +47,13 @@ client.on("messageCreate", (message) => {
         }
     }
 })
+
+function makeCourse(name, type, message, channel) { //function for making courses in the category passed to it by channel.
+    message.guild.channels.create({ 
+        name: name, 
+        type: type,
+        parent: channel,
+    });
+  }
 
 client.login(config.token);

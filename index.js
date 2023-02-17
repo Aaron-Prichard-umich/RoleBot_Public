@@ -7,7 +7,7 @@ get bot to interact with messages in testing server: :)
 implement create channel command: :)
 implement role assignment poll: :(
 */
-const { Client, GatewayIntentBits, EmbedBuilder, PermissionsBitField, Permissions, Guild, ChannelType, ActivityType } = require(`discord.js`);
+const { Client, GatewayIntentBits, EmbedBuilder, PermissionsBitField, Permissions, Guild, ChannelType, ActivityType, ActionRowBuilder, Events, StringSelectMenuBuilder } = require(`discord.js`);
 const prefix = '!';
 const config = require('./config.json');
 const client = new Client({
@@ -21,6 +21,11 @@ client.on("ready", () => {
     console.log("Role Bot is online!");
     client.user.setActivity('Beep Boop', {type: ActivityType.Listening});
 })
+
+client.on(Events.InteractionCreate, roleSelected => { //listener for role selection from selectmenu. assign role selected in menu.
+    if (!roleSelected.isStringSelectMenu()) return;
+    console.log(roleSelected.values[0]);
+}); 
 
 client.on("messageCreate", (message) => {
     if(!message.content.startsWith(prefix) || message.author.bot) return;
@@ -70,9 +75,25 @@ function makeCourse(name, type, message, channel) { //function for making course
 
   function rolePoll(courses) { //create poll message with course names stored from makeCourse commands.
     const channel = client.channels.cache.find(channel => channel.name === "role-request");
-    for(n in courses){
-        channel.send(courses[n]);
-    }
+    const roleSelect = new ActionRowBuilder()
+			.addComponents(
+				new StringSelectMenuBuilder()
+					.setCustomId('roleselect')
+					.setPlaceholder('Choose registered course')
+					.addOptions(
+						{
+							label: 'CSC 1337',
+							description: 'select if you are enrolled in CSC 1337',
+							value: '1337 students',
+						},
+						{
+							label: 'veteran test',
+							description: 'assigns veteran role',
+							value: '1337 veterans',
+						},
+					),
+			);
+            channel.send({ content: 'select a role', components: [roleSelect] });
   }
 
 client.login(config.token);

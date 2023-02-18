@@ -5,9 +5,13 @@ Developer: Aaron Prichard
 Current ToDo:
 get bot to interact with messages in testing server: :)
 implement create channel command: :)
-implement role assignment poll: :(
+implement role assignment poll: :)
+assign roles after retrieving them: :(
+control permissions for roles and courses: :(
+account for edge cases like classes or roles already existing :(
+implement color selection for roles :(
 */
-const { Client, GatewayIntentBits, EmbedBuilder, PermissionsBitField, Permissions, Guild, ChannelType, ActivityType, ActionRowBuilder, Events, StringSelectMenuBuilder } = require(`discord.js`);
+const { Client, GatewayIntentBits, EmbedBuilder, PermissionsBitField, Permissions, Guild, ChannelType, ActivityType, ActionRowBuilder, Events, StringSelectMenuBuilder, GuildMemberRoleManager, RoleSelectMenuBuilder } = require(`discord.js`);
 const prefix = '!';
 const config = require('./config.json');
 const client = new Client({
@@ -24,7 +28,9 @@ client.on("ready", () => {
 
 client.on(Events.InteractionCreate, roleSelected => { //listener for role selection from selectmenu. assign role selected in menu.
     if (!roleSelected.isStringSelectMenu()) return;
-    console.log(roleSelected.values[0]);
+    //need to assign role here. Still checking documentation.
+    
+    roleSelected.channel.send(roleSelected.values[0]);
 }); 
 
 client.on("messageCreate", (message) => {
@@ -79,20 +85,22 @@ function makeCourse(name, type, message, channel) { //function for making course
 			.addComponents(
 				new StringSelectMenuBuilder()
 					.setCustomId('roleselect')
-					.setPlaceholder('Choose registered course')
-					.addOptions(
-						{
-							label: 'CSC 1337',
-							description: 'select if you are enrolled in CSC 1337',
-							value: '1337 students',
-						},
-						{
-							label: 'veteran test',
-							description: 'assigns veteran role',
-							value: '1337 veterans',
-						},
-					),
+					.setPlaceholder('select to get access to channels for your courses')
+                    .addOptions([
+                        {
+                        label:"null",
+                        description:"null",
+                        value: "null",
+                        },
+                ]),
 			);
+            for(n in courses){
+                roleSelect.components[0].addOptions({
+                    label: courses[n],
+                    description: "select if you are registered for " + courses[n],
+                    value: courses[n] + " students",
+                })
+            } 
             channel.send({ content: 'select a role', components: [roleSelect] });
   }
 

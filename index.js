@@ -27,10 +27,13 @@ client.on("ready", () => {
 })
 
 client.on(Events.InteractionCreate, roleSelected => { //listener for role selection from selectmenu. assign role selected in menu.
-    if (!roleSelected.isStringSelectMenu()) return;
-    //need to assign role here. Still checking documentation.
-    
-    roleSelected.channel.send(roleSelected.values[0]);
+    /*
+    need to add case for role not existing (this shouldn't happen anyway).
+    need to workshop best way to undo adding a role by mistake.
+    */
+    if (!roleSelected.isStringSelectMenu()) return; 
+    const roleToAdd = roleSelected.guild.roles.cache.find(role => role.name === roleSelected.values[0]);
+    return roleSelected.member.roles.add(roleToAdd);
 }); 
 
 client.on("messageCreate", (message) => {
@@ -85,14 +88,14 @@ function makeCourse(name, type, message, channel) { //function for making course
 			.addComponents(
 				new StringSelectMenuBuilder()
 					.setCustomId('roleselect')
-					.setPlaceholder('select to get access to channels for your courses')
-                    .addOptions([
+					.setPlaceholder('select a role')
+                    /* .addOptions([
                         {
                         label:"null",
-                        description:"null",
+                        description:"null", //delete? Initially needed to create menu.
                         value: "null",
                         },
-                ]),
+                ]) */,
 			);
             for(n in courses){
                 roleSelect.components[0].addOptions({
@@ -101,7 +104,7 @@ function makeCourse(name, type, message, channel) { //function for making course
                     value: courses[n] + " students",
                 })
             } 
-            channel.send({ content: 'select a role', components: [roleSelect] });
+            channel.send({ content: 'select to get access to channels for your courses', components: [roleSelect] });
   }
 
 client.login(config.token);

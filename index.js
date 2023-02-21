@@ -46,22 +46,25 @@ client.on("messageCreate", (message) => {
         message.channel.send("Test passed");
     }
     if(command === "makecourse"){ 
-        try{
-            const newCat = message.guild.channels.create({  //create category/course grouping from second argument of makecourse command
-                name: name+ " - " +semester, 
-                type: ChannelType.GuildCategory,
-            }).then((channel) =>{
-                makeCourse("Announcements " + name, ChannelType.GuildText, message, channel);  //populate with standard channels
-                makeCourse("zoom-meeting-info " + name, ChannelType.GuildText, message, channel);
-                makeCourse("chat " + name, ChannelType.GuildText, message, channel);
-            });
-            courses.push(name);
-            message.channel.send("Group created for " + name + " 🫡");
-        }
-        catch (e){
-            message.channel.send("Could not Create Channel");
-            message.channel.send("error " + e);
-        }
+        if(!message.guild.channels.cache.find(channel => channel.name === name + " - " + semester)){
+            try{
+                const newCat = message.guild.channels.create({  //create category/course grouping from second argument of makecourse command
+                    name: name + " - " + semester, 
+                    type: ChannelType.GuildCategory,
+                }).then((channel) =>{
+                    makeCourse("Announcements " + name, ChannelType.GuildText, message, channel);  //populate with standard channels
+                    makeCourse("zoom-meeting-info " + name, ChannelType.GuildText, message, channel);
+                    makeCourse("chat " + name, ChannelType.GuildText, message, channel);
+                });
+                courses.push(name);
+                message.channel.send("Group created for " + name + " 🫡");
+            }
+            catch (e){
+                message.channel.send("Could not Create Channel");
+                message.channel.send("error " + e);
+            }
+        }//end of !message.guild.channels.cache.find(channel) if statement.
+        else{message.channel.send("course already exists");}
     }
     if(command === "startsemester"){
         try{
@@ -106,5 +109,6 @@ function makeCourse(name, type, message, channel) { //function for making course
             } 
             channel.send({ content: 'select to get access to channels for your courses', components: [roleSelect] });
   }
+
 
 client.login(config.token);

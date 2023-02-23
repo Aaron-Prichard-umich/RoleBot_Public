@@ -30,9 +30,11 @@ client.on(Events.InteractionCreate, roleSelected => { //listener for role select
     /*
     need to add case for role not existing (this shouldn't happen anyway).
     need to workshop best way to undo adding a role by mistake.
+    need to fix role.find for seeing if member has role already.
     */
     if (!roleSelected.isStringSelectMenu()) return; 
     const roleToAdd = roleSelected.guild.roles.cache.find(role => role.name === roleSelected.values[0]);
+    if(roleSelected.member.roles.some(roleToAdd)){return roleSelected.member.roles.remove(roleToAdd)};
     return roleSelected.member.roles.add(roleToAdd);
 }); 
 

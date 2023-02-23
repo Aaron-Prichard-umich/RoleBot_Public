@@ -27,20 +27,22 @@ client.on("ready", () => {
 })
 
 client.on(Events.InteractionCreate, roleSelected => { //listener for role selection from selectmenu. assign role selected in menu.
-    /*
-    need to add case for role not existing (this shouldn't happen anyway).
-    need to workshop best way to undo adding a role by mistake.
-    need to fix role.find for seeing if member has role already.
-    */
-    if (!roleSelected.isStringSelectMenu()) return; 
-    const roleToAdd = roleSelected.guild.roles.cache.find(role => role.name === roleSelected.values[0]);
-    if(roleSelected.member.roles.some(roleToAdd)){return roleSelected.member.roles.remove(roleToAdd)};
-    return roleSelected.member.roles.add(roleToAdd);
+    if (!roleSelected.isStringSelectMenu()) return
+    const roleToAdd = roleSelected.guild.roles.cache.find(role => role.name === roleSelected.values[0])
+    const targetMember = roleSelected.member
+    let replyOptions = {content: "role removed!", ephemeral: true}
+    if(targetMember.roles.cache.has(roleToAdd.id)){
+        targetMember.roles.remove(roleToAdd)
+    }
+    else{
+        replyOptions = {content: "role added!", ephemeral: true}
+        targetMember.roles.add(roleToAdd)
+    }
+    roleSelected.reply(replyOptions)
 }); 
 
 client.on("messageCreate", (message) => {
     if(!message.content.startsWith(prefix) || message.author.bot) return;
-
     const args = message.content.slice(prefix.length).split(/ +/);
     const command = args.shift().toLowerCase(); //stores command/argument 0
     const name = args.shift(); //name of course/argument 1

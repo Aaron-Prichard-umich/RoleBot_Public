@@ -11,7 +11,7 @@ control permissions for roles and courses: :(
 account for edge cases like classes or roles already existing :(
 implement color selection for roles :(
 */
-const { Client, GatewayIntentBits, EmbedBuilder, PermissionsBitField, Permissions, Guild, ChannelType, ActivityType, ActionRowBuilder, Events, StringSelectMenuBuilder, GuildMemberRoleManager, RoleSelectMenuBuilder } = require(`discord.js`);
+const { Client, GatewayIntentBits, EmbedBuilder, PermissionsBitField, Permissions, Guild, ChannelType, ActivityType, ActionRowBuilder, Events, StringSelectMenuBuilder, GuildMemberRoleManager, RoleSelectMenuBuilder, PermissionOverwrites, PermissionOverwriteManager, PermissionFlagsBits } = require(`discord.js`);
 const prefix = '!';
 const config = require('./config.json');
 const client = new Client({
@@ -52,14 +52,21 @@ client.on("messageCreate", (message) => {
     if(command === "makecourse"){ 
         if(!message.guild.channels.cache.find(channel => channel.name === name + " - " + semester)){
             try{
+                const everyoneRole = client.guilds.id;
                 const newCat = message.guild.channels.create({  //create category/course grouping from second argument of makecourse command
                     name: name + " - " + semester, 
                     type: ChannelType.GuildCategory,
+                    permissionOverwrites: [
+                        {type: role, id: message.author.id, allow: [PermissionFlagsBits.ViewChannel]},
+                        {type: role, id: client.id, allow: [PermissionFlagsBits.ViewChannel]},
+                        {type: role, id: everyoneRole.id, deny: [PermissionFlagsBits.ViewChannel]},
+                    ],
                 }).then((channel) =>{
                     makeCourse("Announcements " + name, ChannelType.GuildText, message, channel);  //populate with standard channels
                     makeCourse("zoom-meeting-info " + name, ChannelType.GuildText, message, channel);
                     makeCourse("chat " + name, ChannelType.GuildText, message, channel);
                 });
+                
                 courses.push(name);
                 message.channel.send("Group created for " + name + " 🫡");
             }
@@ -95,14 +102,7 @@ function makeCourse(name, type, message, channel) { //function for making course
 			.addComponents(
 				new StringSelectMenuBuilder()
 					.setCustomId('roleselect')
-					.setPlaceholder('select a role')
-                    /* .addOptions([
-                        {
-                        label:"null",
-                        description:"null", //delete? Initially needed to create menu.
-                        value: "null",
-                        },
-                ]) */,
+					.setPlaceholder('select a role'),
 			);
             for(n in courses){
                 roleSelect.components[0].addOptions({

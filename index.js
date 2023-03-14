@@ -11,7 +11,7 @@ control permissions for roles and courses: :(
 account for edge cases like classes or roles already existing :(
 implement color selection for roles :(
 */
-const { Client, GatewayIntentBits, EmbedBuilder, PermissionsBitField, Permissions, Guild, ChannelType, ActivityType, ActionRowBuilder, Events, StringSelectMenuBuilder, GuildMemberRoleManager, RoleSelectMenuBuilder, PermissionOverwrites, PermissionOverwriteManager, PermissionFlagsBits } = require(`discord.js`);
+const { Client, GatewayIntentBits, EmbedBuilder, PermissionsBitField, Permissions, Guild, ChannelType, ActivityType, ActionRowBuilder, Events, StringSelectMenuBuilder, GuildMemberRoleManager, RoleSelectMenuBuilder, PermissionOverwrites, PermissionOverwriteManager, PermissionFlagsBits, Role, User } = require(`discord.js`);
 const prefix = '!';
 const config = require('./config.json');
 const client = new Client({
@@ -52,14 +52,21 @@ client.on("messageCreate", (message) => {
     if(command === "makecourse"){ 
         if(!message.guild.channels.cache.find(channel => channel.name === name + " - " + semester)){
             try{
-                const everyoneRole = client.guilds.id;
-                const newCat = message.guild.channels.create({  //create category/course grouping from second argument of makecourse command
+                    let channelRole = null;
+                    const roleName = name + " " + "Students";
+                    if(!message.guild.roles.cache.find(role => role.name === roleName )){
+                        newRole = createRole(roleName, message).then(channelRole = message.guild.roles.cache.find(role => role.name === roleName));
+                    }
+                    channelRole = message.guild.roles.cache.find(role => role.name === roleName)
+                
+                const everyoneRole = message.guild.roles.everyone;
+                message.guild.channels.create({  //create category/course grouping from second argument of makecourse command
                     name: name + " - " + semester, 
                     type: ChannelType.GuildCategory,
                     permissionOverwrites: [
-                        {type: role, id: message.author.id, allow: [PermissionFlagsBits.ViewChannel]},
-                        {type: role, id: client.id, allow: [PermissionFlagsBits.ViewChannel]},
-                        {type: role, id: everyoneRole.id, deny: [PermissionFlagsBits.ViewChannel]},
+                        {id: channelRole.id, allow: [PermissionFlagsBits.ViewChannel]},
+                        {id: client.user, allow: [PermissionFlagsBits.ViewChannel]},
+                        {id: everyoneRole.id, deny: [PermissionFlagsBits.ViewChannel]},
                     ],
                 }).then((channel) =>{
                     makeCourse("Announcements " + name, ChannelType.GuildText, message, channel);  //populate with standard channels
@@ -71,7 +78,7 @@ client.on("messageCreate", (message) => {
                 message.channel.send("Group created for " + name + " 🫡");
             }
             catch (e){
-                message.channel.send("Could not Create Channel");
+                message.channel.send("Could not Create Course");
                 message.channel.send("error " + e);
             }
         }//end of !message.guild.channels.cache.find(channel) if statement.
@@ -96,7 +103,7 @@ function makeCourse(name, type, message, channel) { //function for making course
     });
   }
 
-  function rolePoll(courses) { //create poll message with course names stored from makeCourse commands.
+function rolePoll(courses) { //create poll message with course names stored from makeCourse commands.
     const channel = client.channels.cache.find(channel => channel.name === "role-request");
     const roleSelect = new ActionRowBuilder()
 			.addComponents(
@@ -113,6 +120,16 @@ function makeCourse(name, type, message, channel) { //function for making course
             } 
             channel.send({ content: 'select to get access to channels for your courses', components: [roleSelect] });
   }
+
+async function createRole(name, message){
+    const roleOptions = {
+        name: name,
+        color: '#FF0000' //red; Replace with dynamic color choice logic
+        };
+    
+       const newRole = await message.guild.roles.create(roleOptions);
+       return newRole;
+}
 
 
 client.login(config.token);

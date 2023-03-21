@@ -2,14 +2,15 @@
 Project Desc: Discord Bot to assist in managing roles and channels for students to access the appropriate information channels for their courses. 
 (OOP Project for CSC 325)
 Developer: Aaron Prichard
-Current ToDo:
-get bot to interact with messages in testing server: :)
-implement create channel command: :)
-implement role assignment poll: :)
-assign roles after retrieving them: :)
-control permissions for roles and courses: :(
-account for edge cases like classes or roles already existing :)
-implement color selection for roles :(
+Current ToDo: ✅ 🚩
+get bot to interact with messages in testing server: ✅
+implement create channel command: ✅
+implement role assignment poll: ✅
+assign roles after retrieving them: ✅
+control permissions for roles and courses: ✅
+account for edge cases like classes or roles already existing: ✅
+implement color selection for roles: ✅
+make roles slightly darker for veterans: 🚩
 */
 const { Client, GatewayIntentBits, EmbedBuilder, PermissionsBitField, Permissions, Guild, ChannelType, ActivityType, ActionRowBuilder, Events, StringSelectMenuBuilder, GuildMemberRoleManager, RoleSelectMenuBuilder, PermissionOverwrites, PermissionOverwriteManager, PermissionFlagsBits, Role, User } = require(`discord.js`);
 const prefix = '!';
@@ -18,7 +19,7 @@ const client = new Client({
     intents: [
         GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent]
 });
-const courses = ["testCat"]; //keep track of courses created for starting semester
+const courses = []; //keep track of courses created for starting semester
 const semester = "Spring 2023"; //global for semester. Needs setter function for setting from discord.
 
 client.on("ready", () => {
@@ -53,28 +54,31 @@ client.on("messageCreate", (message) => {
         if(!message.guild.channels.cache.find(channel => channel.name === name + " - " + semester)){
             try{
                     let channelRole = null;
-                    const roleName = name + " " + "Students";
+                    const roleName = name + " Students";
                     if(!message.guild.roles.cache.find(role => role.name === roleName )){
-                        channelRole = createRole(roleName, message);
+                        const color = '#'+(Math.random()*0xFFFFFF<<0).toString(16);
+                        channelRole = createRole(roleName, color, message);
+                        createRole(name + " Veterans", color, message);
                     }
-                    channelRole = message.guild.roles.cache.find(role => role.name === roleName)
-                
+                    
                 const everyoneRole = message.guild.roles.everyone;
+                channelRole.then(() => {
+                newRole = message.guild.roles.cache.find(role => role.name === roleName)
                 const channelOptions = {  //create category/course grouping from second argument of makecourse command
                     name: name + " - " + semester,
                     type: ChannelType.GuildCategory,
                     permissionOverwrites: [
-                        {id: channelRole.id, allow: [PermissionFlagsBits.ViewChannel]},
-                        {id: client.user, allow: [PermissionFlagsBits.ViewChannel]},
+                        {id: message.guild.roles.cache.find(role => role.name === roleName).id, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages]},
                         {id: everyoneRole.id, deny: [PermissionFlagsBits.ViewChannel]},
                     ],
                 }
+                
                 message.guild.channels.create(channelOptions).then((channel) =>{
                     makeCourse("Announcements " + name, ChannelType.GuildText, message, channel);  //populate with standard channels
                     makeCourse("zoom-meeting-info " + name, ChannelType.GuildText, message, channel);
                     makeCourse("chat " + name, ChannelType.GuildText, message, channel);
-                });
-
+                })});
+                
                 courses.push(name);
                 message.channel.send("Group created for " + name + " 🫡");
             }
@@ -116,16 +120,16 @@ function rolePoll(courses) { //create poll message with course names stored from
                 roleSelect.components[0].addOptions({
                     label: courses[n],
                     description: "select if you are registered for " + courses[n],
-                    value: courses[n] + " students",
+                    value: courses[n] + " Students",
                 })
             } 
-            channel.send({ content: 'select to get access to channels for your courses', components: [roleSelect] });
+            channel.send({ content: 'select to get access to channels for your courses (select again to remove if added by mistake)', components: [roleSelect] });
   }
 
-async function createRole(name, message){
+async function createRole(name, color, message){
     const roleOptions = {
         name: name,
-        color: '#FF0000' //red; Replace with dynamic color choice logic
+        color: color
         };
     
        newRole = await message.guild.roles.create(roleOptions);

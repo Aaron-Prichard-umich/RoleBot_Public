@@ -11,6 +11,7 @@ control permissions for roles and courses: ✅
 account for edge cases like classes or roles already existing: ✅
 implement color selection for roles: ✅
 make roles slightly darker for veterans: 🚩
+implement promotion of students to veterans in endsemester cmd: 🚩
 */
 const { Client, GatewayIntentBits, EmbedBuilder, PermissionsBitField, Permissions, Guild, ChannelType, ActivityType, ActionRowBuilder, Events, StringSelectMenuBuilder, GuildMemberRoleManager, RoleSelectMenuBuilder, PermissionOverwrites, PermissionOverwriteManager, PermissionFlagsBits, Role, User, ButtonBuilder } = require(`discord.js`);
 const prefix = '!';
@@ -19,7 +20,7 @@ const client = new Client({
     intents: [
         GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent]
 });
-const courses = []; //keep track of courses created for starting semester
+const courses = [1, 2, 3, 4, 5, 6, 7]; //keep track of courses created for starting semester
 let semester = "Spring 2023"; //global for semester.
 //ids for bot to react to. I don't think these need to be abstracted as they are easily optained by anyone in the server or extracted by discord.js code.
 const adminId = "378011482153025536"; //dr spradling id
@@ -30,8 +31,9 @@ client.on("ready", () => {
 })
 //listener for role selection from selectmenu. assign role selected in menu.
 client.on(Events.InteractionCreate, roleSelected => { 
-    if (!roleSelected.isStringSelectMenu()) return
-    const roleToAdd = roleSelected.guild.roles.cache.find(role => role.name === roleSelected.values[0])
+    if (!roleSelected.isButton()) return
+    if(roleSelected.customId.endsWith(' Students')){
+    const roleToAdd = roleSelected.guild.roles.cache.find(role => role.name === roleSelected.customId)
     const targetMember = roleSelected.member
     let replyOptions = {content: "role removed!", ephemeral: true}
     if(targetMember.roles.cache.has(roleToAdd.id)){
@@ -42,10 +44,10 @@ client.on(Events.InteractionCreate, roleSelected => {
         targetMember.roles.add(roleToAdd)
     }
     roleSelected.reply(replyOptions)
-});
+}});
 //listener for warning embed button interactions (continue/cancel)
 client.on(Events.InteractionCreate, warningEvent => {
-    if(!warningEvent.isButton()){
+    if(!warningEvent.isButton() && (warningEvent.customId === 'cancel' || warningEvent.customId === 'continue')){
         return
     }
     if(warningEvent.customId === 'cancel'){ //delete the message if cancelled
@@ -148,9 +150,16 @@ function makeCourse(name, type, message, channel) { //function for making course
 
 function rolePoll(courses) { //create poll message with course names stored from makeCourse commands.
     const channel = client.channels.cache.find(channel => channel.name === "role-request");
-    const roleSelect = new ActionRowBuilder()
-			.addComponents(
-				new StringSelectMenuBuilder()
+    const roleSelect = new ActionRowBuilder();
+			for(const course of courses){
+                const courseButton = new ButtonBuilder()
+                .setCustomId(`${course} Students`)
+                .setLabel(course)
+                .setStyle(1);
+                roleSelect.addComponents(courseButton);
+            }
+           
+				/*new StringSelectMenuBuilder()
 					.setCustomId('roleselect')
 					.setPlaceholder('select a role'),
 			);
@@ -160,7 +169,7 @@ function rolePoll(courses) { //create poll message with course names stored from
                     description: "select if you are registered for " + courses[n],
                     value: courses[n] + " Students",
                 })
-            } 
+            } */
             channel.send({ content: 'select to get access to channels for your courses (select again to remove if added by mistake)', components: [roleSelect] });
   }
 

@@ -12,7 +12,7 @@ account for edge cases like classes or roles already existing: ✅
 implement color selection for roles: ✅
 make roles slightly darker for veterans: 🚩
 */
-const { Client, GatewayIntentBits, EmbedBuilder, PermissionsBitField, Permissions, Guild, ChannelType, ActivityType, ActionRowBuilder, Events, StringSelectMenuBuilder, GuildMemberRoleManager, RoleSelectMenuBuilder, PermissionOverwrites, PermissionOverwriteManager, PermissionFlagsBits, Role, User } = require(`discord.js`);
+const { Client, GatewayIntentBits, EmbedBuilder, PermissionsBitField, Permissions, Guild, ChannelType, ActivityType, ActionRowBuilder, Events, StringSelectMenuBuilder, GuildMemberRoleManager, RoleSelectMenuBuilder, PermissionOverwrites, PermissionOverwriteManager, PermissionFlagsBits, Role, User, ButtonBuilder } = require(`discord.js`);
 const prefix = '!';
 const config = require('./config.json');
 const client = new Client({
@@ -20,14 +20,14 @@ const client = new Client({
         GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent]
 });
 const courses = []; //keep track of courses created for starting semester
-const semester = "Spring 2023"; //global for semester. Needs setter function for setting from discord.
+let semester = "Spring 2023"; //global for semester.
 
 client.on("ready", () => {
     console.log("Role Bot is online!");
     client.user.setActivity('Beep Boop', {type: ActivityType.Listening});
 })
-
-client.on(Events.InteractionCreate, roleSelected => { //listener for role selection from selectmenu. assign role selected in menu.
+//listener for role selection from selectmenu. assign role selected in menu.
+client.on(Events.InteractionCreate, roleSelected => { 
     if (!roleSelected.isStringSelectMenu()) return
     const roleToAdd = roleSelected.guild.roles.cache.find(role => role.name === roleSelected.values[0])
     const targetMember = roleSelected.member
@@ -41,7 +41,22 @@ client.on(Events.InteractionCreate, roleSelected => { //listener for role select
     }
     roleSelected.reply(replyOptions)
 });
-
+//listener for warning embed button interactions (continue/cancel)
+client.on(Events.InteractionCreate, warningEvent => {
+    if(!warningEvent.isButton()){
+        return
+    }
+    if(warningEvent.customId === 'cancel'){ //delete the message if cancelled
+        warningEvent.reply({content: "Cancelled Promotion", ephemeral: true});
+        warningEvent.message.delete();
+        
+    }
+    else if(warningEvent.customId === 'continue'){ //promote all the students if continued
+        promoteStudents(warningEvent);
+        warningEvent.reply({content: "Promoting Student Roles", ephemeral: true});
+    }
+})
+//command handler
 client.on("messageCreate", (message) => {
     if(!message.content.startsWith(prefix) || message.author.bot) return;
     const args = message.content.slice(prefix.length).split(/ +/);
@@ -98,6 +113,27 @@ client.on("messageCreate", (message) => {
             console.log(e);
         }
     }
+
+    if(command === "endsemester"){
+        const warningEmbed = new EmbedBuilder()
+            .setColor("#FF0000")
+            .setTitle("Permanent Action")
+            .setDescription("This will promote all student roles to veteran roles and cannot be undone!");
+
+        const buttonRow = new ActionRowBuilder()
+            .addComponents(
+                new ButtonBuilder()
+                    .setCustomId('continue')
+                    .setLabel('Continue')
+                    .setStyle(1),
+                new ButtonBuilder()
+                    .setCustomId('cancel')
+                    .setLabel('Cancel')
+                    .setStyle(4)
+            );
+
+        message.channel.send({embeds: [warningEmbed], components: [buttonRow]});
+    }
 })
 
 function makeCourse(name, type, message, channel) { //function for making courses in the category passed to it by channel.
@@ -135,6 +171,9 @@ async function createRole(name, color, message){
        newRole = await message.guild.roles.create(roleOptions);
        return newRole;
        
+}
+function promoteStudents(){
+    
 }
 
 

@@ -21,7 +21,9 @@ const client = new Client({
 });
 const courses = []; //keep track of courses created for starting semester
 let semester = "Spring 2023"; //global for semester.
-
+//ids for bot to react to. I don't think these need to be abstracted as they are easily optained by anyone in the server or extracted by discord.js code.
+const adminId = "378011482153025536"; //dr spradling id
+const developerId = "832403471026225163"; //developer id (mine right now)
 client.on("ready", () => {
     console.log("Role Bot is online!");
     client.user.setActivity('Beep Boop', {type: ActivityType.Listening});
@@ -65,7 +67,7 @@ client.on("messageCreate", (message) => {
     if(command === "test"){
         message.channel.send("Test passed");
     }
-    if(command === "makecourse"){
+    if(command === "makecourse" && (message.author.id === developerId || message.author.id === adminId)){
         if(!message.guild.channels.cache.find(channel => channel.name === name + " - " + semester)){
             try{
                     let channelRole = null;
@@ -104,7 +106,7 @@ client.on("messageCreate", (message) => {
         }//end of !message.guild.channels.cache.find(channel) if statement.
         else{message.channel.send("course already exists");}
     }
-    if(command === "startsemester"){
+    if(command === "startsemester" && (message.author.id === developerId || message.author.id === adminId)){
         try{
             rolePoll(courses);
         }
@@ -114,7 +116,7 @@ client.on("messageCreate", (message) => {
         }
     }
 
-    if(command === "endsemester"){
+    if(command === "endsemester" && (message.author.id === developerId || message.author.id === adminId)){
         const warningEmbed = new EmbedBuilder()
             .setColor("#FF0000")
             .setTitle("Permanent Action")

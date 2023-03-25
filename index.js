@@ -20,7 +20,7 @@ const client = new Client({
     intents: [
         GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent]
 });
-const courses = ['1', '2', '3', '4', '5', '6', '7']; //keep track of courses created for starting semester
+const courses = []; //keep track of courses created for starting semester
 let semester = "Spring 2023"; //global for semester.
 //ids for bot to react to. I don't think these need to be abstracted as they are easily optained by anyone in the server or extracted by discord.js code.
 const adminId = "378011482153025536"; //dr spradling id
@@ -150,16 +150,13 @@ function makeCourse(name, type, message, channel) { //function for making course
 
 function rolePoll(courses) { //create poll message with course names stored from makeCourse commands.
     const channel = client.channels.cache.find(channel => channel.name === "role-request");
-    const roleSelect = new ActionRowBuilder();
-	let rowTracker = 0;
-    let courseCount = 0;		
+    const roleSelect = new ActionRowBuilder();		
     for(const course of courses){
-        if(courseCount>4){rowTracker++; courseCount = 0;}
                 const courseButton = new ButtonBuilder()
                 .setCustomId(`${course} Students`)
                 .setLabel(course)
                 .setStyle(1);
-                roleSelect[rowTracker].addComponents(courseButton);
+                roleSelect.addComponents(courseButton);
             }
             channel.send({ content: 'select to get access to channels for your courses (select again to remove if added by mistake)', components: [roleSelect] });
   }

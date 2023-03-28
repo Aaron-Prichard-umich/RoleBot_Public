@@ -20,7 +20,7 @@ const client = new Client({
     intents: [
         GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent]
 });
-const courses = []; //keep track of courses created for starting semester
+const courses = ["1", "2", "3"]; //keep track of courses created for starting semester
 let semester = "Spring 2023"; //global for semester.
 //ids for bot to react to. I don't think these need to be abstracted as they are easily optained by anyone in the server or extracted by discord.js code.
 const adminId = "378011482153025536"; //dr spradling id
@@ -74,11 +74,9 @@ client.on("messageCreate", (message) => {
             try{
                     let channelRole = null;
                     const roleName = name + " Students";
-                    if(!message.guild.roles.cache.find(role => role.name === roleName )){
-                        const color = '#'+(Math.random()*0xFFFFFF<<0).toString(16);
-                        channelRole = createRole(roleName, color, message);
-                        createRole(name + " Veterans", color, message);
-                    }
+                    const color = '#'+(Math.random()*0xFFFFFF<<0).toString(16);
+                    channelRole = createRole(roleName, color, message);
+                    createRole(name + " Veterans", color, message);
                     
                 const everyoneRole = message.guild.roles.everyone;
                 channelRole.then(() => {
@@ -162,16 +160,21 @@ function rolePoll(courses) { //create poll message with course names stored from
   }
 
 async function createRole(name, color, message){
-    const roleOptions = {
-        name: name,
-        color: color
-        };
-    
-       newRole = await message.guild.roles.create(roleOptions);
+    if(!message.guild.roles.cache.find(role => role.name === name )){
+        const roleOptions = {
+            name: name,
+            color: color
+            };
+        
+        newRole = await message.guild.roles.create(roleOptions);
+    }
+    else{
+        newRole = await message.guild.roles.cache.find(role => role.name === name);
+    }
        return newRole;
        
 }
-function promoteStudents(){
+async function promoteStudents(event){
     
 }
 

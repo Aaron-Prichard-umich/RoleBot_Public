@@ -20,7 +20,7 @@ const client = new Client({
     intents: [
         GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent]
 });
-const courses = ["1", "2", "3"]; //keep track of courses created for starting semester
+const courses = ["1", "2"]; //keep track of courses created for starting semester
 let semester = "Spring 2023"; //global for semester.
 //ids for bot to react to. I don't think these need to be abstracted as they are easily optained by anyone in the server or extracted by discord.js code.
 const adminId = "378011482153025536"; //dr spradling id
@@ -56,7 +56,10 @@ client.on(Events.InteractionCreate, warningEvent => {
         
     }
     else if(warningEvent.customId === 'continue'){ //promote all the students if continued
-        promoteStudents(warningEvent);
+        const server = warningEvent.guildId
+        for(const course of courses){
+           promoteStudents(server, course);
+        }
         warningEvent.reply({content: "Promoting Student Roles", ephemeral: true});
     }
 })
@@ -174,8 +177,21 @@ async function createRole(name, color, message){
        return newRole;
        
 }
-async function promoteStudents(event){
-    
+async function promoteStudents(server, name){
+    const guild = await client.guilds.fetch(server);
+    const roles = await guild.roles.fetch();
+    const studentRole = roles.find(role => {
+        return role.name === name + " Students";
+    });
+    const veteranRole = roles.find(role => {
+        return role.name === name + " Veterans";
+    })
+    if(!studentRole) return;
+    const membersWithStudentRole = studentRole.members;
+    membersWithStudentRole.forEach(async member => {
+        await member.roles.add(veteranRole)
+        await member.roles.remove(studentRole)
+    });
 }
 
 

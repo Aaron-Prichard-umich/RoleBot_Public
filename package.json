@@ -1,6 +1,6 @@
 {
   "dependencies": {
-    "discord.js": "^14.7.1"
+    "discord.js": "^14.9"
   },
   "name": "role-bot",
   "version": "1.0.0",

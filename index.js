@@ -11,7 +11,9 @@ control permissions for roles and courses: ✅
 account for edge cases like classes or roles already existing: ✅
 implement color selection for roles: ✅
 make roles slightly darker for veterans: 🚩
-implement promotion of students to veterans in endsemester cmd: 🚩
+implement promotion of students to veterans in endsemester cmd: ✅
+implement archiving channels in endsemester cmd: ✅
+Ensure descending alphanumeric order of roles when adding roles: 🚩
 */
 const { Client, GatewayIntentBits, EmbedBuilder, PermissionsBitField, Permissions, Guild, ChannelType, ActivityType, ActionRowBuilder, Events, StringSelectMenuBuilder, GuildMemberRoleManager, RoleSelectMenuBuilder, PermissionOverwrites, PermissionOverwriteManager, PermissionFlagsBits, Role, User, ButtonBuilder } = require(`discord.js`);
 const prefix = '!';
@@ -29,11 +31,15 @@ client.on("ready", () => {
     console.log("Role Bot is online!");
     client.user.setActivity('Beep Boop', {type: ActivityType.Listening});
 })
-//listener for role selection from selectmenu. assign role selected in menu.
+//listener for role selection from button. assign role selected from button.    
+
 client.on(Events.InteractionCreate, roleSelected => { 
     if (!roleSelected.isButton()) return
-    if(roleSelected.customId.endsWith(' Students')){
-    const roleToAdd = roleSelected.guild.roles.cache.find(role => role.name === roleSelected.customId)
+    if(!roleSelected.customId.endsWith(' Students')){ return }
+    else{
+    const roleToAdd = roleSelected.guild.roles.cache.find(role => {
+        return role.name === roleSelected.customId;
+    })
     const targetMember = roleSelected.member
     let replyOptions = {content: "role removed!", ephemeral: true}
     if(targetMember.roles.cache.has(roleToAdd.id)){
@@ -48,7 +54,7 @@ client.on(Events.InteractionCreate, roleSelected => {
 //listener for warning embed button interactions (continue/cancel)
 client.on(Events.InteractionCreate, warningEvent => {
     if(!warningEvent.isButton() && (warningEvent.customId === 'cancel' || warningEvent.customId === 'continue')){
-        return
+        return;
     }
     if(warningEvent.customId === 'cancel'){ //delete the message if cancelled
         warningEvent.reply({content: "Cancelled Promotion", ephemeral: true});
@@ -59,8 +65,9 @@ client.on(Events.InteractionCreate, warningEvent => {
         const server = warningEvent.guildId
         for(const course of courses){
            promoteStudents(server, course);
+           resetPermissions(server, course + " - " + semester);
         }
-        warningEvent.reply({content: "Promoting Student Roles", ephemeral: true});
+        warningEvent.reply({content: "Promoting Students and Archiving Channels...", ephemeral: true});
     }
 })
 //command handler
@@ -123,7 +130,7 @@ client.on("messageCreate", (message) => {
         const warningEmbed = new EmbedBuilder()
             .setColor("#FF0000")
             .setTitle("Permanent Action")
-            .setDescription("This will promote all student roles to veteran roles and cannot be undone!");
+            .setDescription("This will promote all student roles and archive current semester categories and cannot be undone!");
 
         const buttonRow = new ActionRowBuilder()
             .addComponents(
@@ -177,6 +184,7 @@ async function createRole(name, color, message){
        return newRole;
        
 }
+
 async function promoteStudents(server, name){
     const guild = await client.guilds.fetch(server);
     const roles = await guild.roles.fetch();
@@ -194,5 +202,26 @@ async function promoteStudents(server, name){
     });
 }
 
+async function resetPermissions( guildId, course) {
+    const guild = await client.guilds.fetch(guildId);
+    const category = guild.channels.cache.find(category => {
+        return category.name === course;
+    });
+    const permissions = [
+      {
+        id: guildId,
+        deny: [PermissionFlagsBits.ViewChannel],
+      },
+    ];
+    // Reset the permissions for the category
+    await category.permissionOverwrites.set(permissions);
+    // Reset the permissions for all channels in the category
+    const channels = guild.channels.cache.filter(
+        (channel) => channel.type === "GUILD_TEXT" && channel.parentId === category.id
+      );
+      for (const channel of channels.values()) {
+        await channel.permissionOverwrites.set(permissions);
+      }
+  }
 
 client.login(config.token);

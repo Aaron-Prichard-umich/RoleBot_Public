@@ -10,7 +10,7 @@ function createHelpEmbed() {
        { name: "!test", value: "!test", inline: false },
        {
          name: "!makecourse",
-         value:"!makecourse [name] (!makecourse csc-325) - Creates a new course with the given name. Requires admin or developer permission.",
+         value:"!makecourse [name] [workshop?] (!makecourse csc-325 workshop) - Creates a new course with the given name. Adds how-to-make-a-video channel if workshop is entered after course name. Requires admin or developer permission.",
          inline: false,
        },
        {

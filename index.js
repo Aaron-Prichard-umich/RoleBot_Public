@@ -126,6 +126,9 @@ client.on("messageCreate", (message) => {
                     makeCourse("Announcements " + name, ChannelType.GuildText, message, channel);  //populate with standard channels
                     makeCourse("zoom-meeting-info " + name, ChannelType.GuildText, message, channel);
                     makeCourse("chat " + name, ChannelType.GuildText, message, channel);
+                    if(argTwo === "workshop"){
+                    makeCourse("how-to-make-a-video" + name, ChannelType.GuildText, message, channel);
+                    }
                     insertRole(name, message);
                 })});
                 

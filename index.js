@@ -9,12 +9,13 @@ implement role assignment poll: ✅
 assign roles after retrieving them: ✅
 control permissions for roles and courses: ✅
 account for edge cases like classes or roles already existing: ✅
-implement color selection for roles: ✅
-make roles slightly darker for veterans: 🚩
+implement color selection for roles: ✅ currently a transient error where value generated is invalid color, still troubleshooting
+make roles slightly darker for veterans: 🚩 possible approach: split hex into R, G, B strings, subtract 1 from each, reconstruct hex
 implement promotion of students to veterans in endsemester cmd: ✅
 implement archiving channels in endsemester cmd: ✅
 Ensure alphanumeric order of roles when adding roles: ✅
 Add function for Cohabitating courses: ✅
+Needs a little more error handling so it doesn't crash from transient errors, but there are contingencies to come back from a crash for now.
 */
 const { Client, GatewayIntentBits, EmbedBuilder, PermissionsBitField, Permissions, Guild, ChannelType, ActivityType, ActionRowBuilder, Events, StringSelectMenuBuilder, GuildMemberRoleManager, RoleSelectMenuBuilder, PermissionOverwrites, PermissionOverwriteManager, PermissionFlagsBits, Role, User, ButtonBuilder } = require(`discord.js`);
 const prefix = '!';
@@ -24,6 +25,7 @@ const client = new Client({
         GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent]
 });
 const {createHelpEmbed} = require("./embedTemplate.js");
+const fs = require('fs');
 let optional = "";
 let courses = []; //keep track of courses created for starting semester
 let roles = []; //separate array for roles in the event there are cohabitated courses
@@ -34,6 +36,7 @@ const developerId = "832403471026225163"; //developer id (mine right now)
 client.on("ready", () => {
     console.log("Role Bot is online!");
     client.user.setActivity('Beep Boop', {type: ActivityType.Listening});
+    loadData();
 })
 //listener for role selection from button. assign role selected from button.    
 
@@ -73,21 +76,22 @@ client.on(Events.InteractionCreate, warningEvent => {
                 promoteStudents(server, role);
             }
             for(const course of courses){
-            resetPermissions(server, course + " - " + semester);
+                resetPermissions(server, course + " - " + semester);
             }
             
             warningEvent.reply({content: "Promoting Students and Archiving Channels...", ephemeral: true});
+            clearData();
         }
     }
     if(warningEvent.customId.endsWith("deletecourse")){
         if(warningEvent.customId === 'cancel deletecourse'){ //delete the message if cancelled
             warningEvent.reply({content: "Cancelled course deletion", ephemeral: true});
             warningEvent.message.delete();
-            
         }
         else if(warningEvent.customId === 'continue deletecourse'){ //delete the course if continued
             deleteCourse(server, optional);
             warningEvent.reply({content: "course " + optional + " deleted", ephemeral: true});
+            saveData();
         }
     }
 })
@@ -123,11 +127,19 @@ client.on("messageCreate", (message) => {
                 }
                 
                 message.guild.channels.create(channelOptions).then((channel) =>{
-                    makeCourse("Announcements " + name, ChannelType.GuildText, message, channel);  //populate with standard channels
-                    makeCourse("zoom-meeting-info " + name, ChannelType.GuildText, message, channel);
-                    makeCourse("chat " + name, ChannelType.GuildText, message, channel);
+                    makeCourse("Announcements " + name, ChannelType.GuildText, message, channel, [
+                        {id: message.guild.roles.cache.find(role => role.name === roleName).id, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.AddReactions]},
+                        {id: everyoneRole.id, deny: [PermissionFlagsBits.ViewChannel]}]); 
+                    makeCourse("zoom-meeting-info " + name, ChannelType.GuildText, message, channel, [
+                        {id: message.guild.roles.cache.find(role => role.name === roleName).id, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.AddReactions]},
+                        {id: everyoneRole.id, deny: [PermissionFlagsBits.ViewChannel]}]);
+                    makeCourse("chat " + name, ChannelType.GuildText, message, channel, [
+                        {id: message.guild.roles.cache.find(role => role.name === roleName).id, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.AddReactions, PermissionFlagsBits.SendMessages]},
+                        {id: everyoneRole.id, deny: [PermissionFlagsBits.ViewChannel]}]);
                     if(argTwo === "workshop"){
-                    makeCourse("how-to-make-a-video" + name, ChannelType.GuildText, message, channel);
+                    makeCourse("how-to-make-a-video " + name, ChannelType.GuildText, message, channel, [
+                        {id: message.guild.roles.cache.find(role => role.name === roleName).id, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.AddReactions]},
+                        {id: everyoneRole.id, deny: [PermissionFlagsBits.ViewChannel]}]);
                     }
                     insertRole(name, message);
                 })});
@@ -135,6 +147,7 @@ client.on("messageCreate", (message) => {
                 courses.push(name);
                 roles.push(name);
                 message.channel.send("Group created for " + name + " 🫡");
+                saveData();
                 
             }
             catch (e){
@@ -142,7 +155,12 @@ client.on("messageCreate", (message) => {
                 message.channel.send("error " + e);
             }
         }//end of !message.guild.channels.cache.find(channel) if statement.
-        else{message.channel.send("course already exists");}
+        else{
+            message.channel.send("course already exists");
+            courses.push(name);
+            roles.push(name);
+            saveData();
+        }
     }
     if(command === "startsemester" && (message.author.id === developerId || message.author.id === adminId)){
         try{
@@ -178,6 +196,7 @@ client.on("messageCreate", (message) => {
             return role.name === argTwo + " Students";
         })
         deleteCourse(message.guildId, argTwo);
+        courseTwoRole.permissions.add(courseOneRole.permissions.toArray());
         const permissions = [
             {
             id: courseTwoRole.id,
@@ -199,13 +218,23 @@ client.on("messageCreate", (message) => {
         const embed = createHelpEmbed();
         message.channel.send({embeds: [embed]});
     }
+    if(command === "s" && (message.author.id === developerId || message.author.id === adminId)){
+        saveData();
+    }
+    if(command === "d" && (message.author.id === developerId || message.author.id === adminId)){
+        clearData();
+    }
+    if(command === "insertRole" && (message.author.id === developerId || message.author.id === adminId)){
+        insertRole(name, message);
+    }
 })
 
-function makeCourse(name, type, message, channel) { //function for making courses in the category passed to it by channel.
+function makeCourse(name, type, message, channel, permissions) { //function for making courses in the category passed to it by channel.
     message.guild.channels.create({ 
         name: name, 
         type: type,
         parent: channel,
+        permissionOverwrites: permissions,
     });
   }
 
@@ -270,10 +299,12 @@ async function resetPermissions( guildId, course) {
     await category.permissionOverwrites.set(permissions);
     // Reset the permissions for all channels in the category
     const channels = guild.channels.cache.filter(
-        (channel) => channel.type === "GUILD_TEXT" && channel.parentId === category.id
+        (channel) => channel.type === ChannelType.GuildText && channel.parentId === category.id
       );
+      
       for (const channel of channels.values()) {
-        await channel.permissionOverwrites.set(permissions);
+        //await channel.permissionOverwrites.set(permissions);
+        channel.lockPermissions(); //sync with parent category
       }
   }
 
@@ -297,6 +328,7 @@ async function deleteCourse(guildId, course){
     index = roles.indexOf(course);
 
     roles.splice(index, 1);
+    saveData();
 }
 
 async function warningEmbed(command, message, name){
@@ -381,5 +413,31 @@ async function insertRole(name, message){
         await veteranRole.setPosition(firstStudent.position-1);
     }
 }
+function saveData() {
+    const data = {
+      courses: courses,
+      roles: roles
+    };
+    fs.writeFileSync('data.json', JSON.stringify(data, null, 2));
+    console.log('Data saved to file.');
+  }
+  function loadData() {
+    try {
+      const data = JSON.parse(fs.readFileSync('data.json'));
+      courses = data.courses;
+      roles = data.roles;
+      console.log('Data loaded from file.');
+    } catch (err) {
+      console.error('Data not loaded. Ignore on initial startup.');
+    }
+  }
+  
+  //clear the saved data in the JSON file
+  function clearData() {
+    fs.unlinkSync('data.json');
+    console.log('Data cleared from file.');
+  }
 
+
+  
 client.login(config.token);

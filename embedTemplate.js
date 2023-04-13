@@ -38,6 +38,21 @@ function createHelpEmbed() {
          value:"!cohab [course1] [course2] (!cohab csc-325 cis-325) - Merges two existing courses into one. Requires admin or developer permission.",
          inline: false,
        },
+       {
+         name: "!s",
+         value:"!s save data to JSON manually. Requires admin or developer permission.",
+         inline: false,
+       },
+       {
+         name: "!d",
+         value:"!d delete JSON manually. Requires admin or developer permission.",
+         inline: false,
+       },
+       {
+        name: "!insertRole",
+        value:"!insertRole [course name] sort student and veteran role manually in the case of an interruption in course creation or role that was made manually. Requires admin or developer permission.",
+        inline: false,
+      },
      );
 return embed;
 }

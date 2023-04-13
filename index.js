@@ -13,7 +13,8 @@ implement color selection for roles: ✅
 make roles slightly darker for veterans: 🚩
 implement promotion of students to veterans in endsemester cmd: ✅
 implement archiving channels in endsemester cmd: ✅
-Ensure alphanumeric order of roles when adding roles: 🚩
+Ensure alphanumeric order of roles when adding roles: ✅
+Add function for Cohabitating courses: ✅
 */
 const { Client, GatewayIntentBits, EmbedBuilder, PermissionsBitField, Permissions, Guild, ChannelType, ActivityType, ActionRowBuilder, Events, StringSelectMenuBuilder, GuildMemberRoleManager, RoleSelectMenuBuilder, PermissionOverwrites, PermissionOverwriteManager, PermissionFlagsBits, Role, User, ButtonBuilder } = require(`discord.js`);
 const prefix = '!';
@@ -22,8 +23,10 @@ const client = new Client({
     intents: [
         GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent]
 });
+const {createHelpEmbed} = require("./embedTemplate.js");
 let optional = "";
-const courses = []; //keep track of courses created for starting semester
+let courses = []; //keep track of courses created for starting semester
+let roles = []; //separate array for roles in the event there are cohabitated courses
 let semester = "Spring 2023"; //global for semester.
 //ids for bot to react to. I don't think these need to be abstracted as they are easily optained by anyone in the server or extracted by discord.js code.
 const adminId = "378011482153025536"; //dr spradling id
@@ -66,10 +69,13 @@ client.on(Events.InteractionCreate, warningEvent => {
         }
         else if(warningEvent.customId === 'continue endsemester'){ //promote all the students if continued
             
+            for(const role of roles){
+                promoteStudents(server, role);
+            }
             for(const course of courses){
-            promoteStudents(server, course);
             resetPermissions(server, course + " - " + semester);
             }
+            
             warningEvent.reply({content: "Promoting Students and Archiving Channels...", ephemeral: true});
         }
     }
@@ -124,7 +130,9 @@ client.on("messageCreate", (message) => {
                 })});
                 
                 courses.push(name);
+                roles.push(name);
                 message.channel.send("Group created for " + name + " 🫡");
+                
             }
             catch (e){
                 message.channel.send("Could not Create Course");
@@ -135,7 +143,7 @@ client.on("messageCreate", (message) => {
     }
     if(command === "startsemester" && (message.author.id === developerId || message.author.id === adminId)){
         try{
-            rolePoll(courses);
+            rolePoll(roles);
         }
         catch(e){
             message.channel.send("error " + e);
@@ -167,7 +175,6 @@ client.on("messageCreate", (message) => {
             return role.name === argTwo + " Students";
         })
         deleteCourse(message.guildId, argTwo);
-        courses.push(argTwo);
         const permissions = [
             {
             id: courseTwoRole.id,
@@ -179,10 +186,15 @@ client.on("messageCreate", (message) => {
             },
         ]
         courseOne.permissionOverwrites.set(permissions);
+        const index = courses.indexOf(name);
+        courses.splice(index, 1);
         courseOne.setName(name + "/" + argTwo + " - " + semester);
+        courses.push(name + "/" + argTwo);
+        roles.push(argTwo)
     }
-    if(command === "r"){
-        insertRole(name, message);
+    if(command === 'help' && (message.author.id === developerId || message.author.id === adminId)){
+        const embed = createHelpEmbed();
+        message.channel.send({embeds: [embed]});
     }
 })
 
@@ -194,13 +206,13 @@ function makeCourse(name, type, message, channel) { //function for making course
     });
   }
 
-function rolePoll(courses) { //create poll message with course names stored from makeCourse commands.
+function rolePoll(roles) { //create poll message with course names stored from makeCourse commands.
     const channel = client.channels.cache.find(channel => channel.name === "role-request");
     const roleSelect = new ActionRowBuilder();		
-    for(const course of courses){
+    for(const role of roles){
                 const courseButton = new ButtonBuilder()
-                .setCustomId(`${course} Students`)
-                .setLabel(course)
+                .setCustomId(`${role} Students`)
+                .setLabel(role)
                 .setStyle(1);
                 roleSelect.addComponents(courseButton);
             }
@@ -276,9 +288,12 @@ async function deleteCourse(guildId, course){
     }
     category.delete();
     
-    const index = courses.indexOf(course);
+    let index = courses.indexOf(course);
 
     courses.splice(index, 1);
+    index = roles.indexOf(course);
+
+    roles.splice(index, 1);
 }
 
 async function warningEmbed(command, message, name){
@@ -327,7 +342,6 @@ async function insertRole(name, message){
     let firstStudent = -1;
     for(let i = message.guild.roles.cache.size - 1; i >= 0; i--) {
         const role = [...message.guild.roles.cache.values()][i];
-        console.log(role.name)
         if(role.name.endsWith("Students") && role != roleToInsert){
             firstStudent = role;
             break; // Exit the loop after finding the first student role
@@ -350,8 +364,6 @@ async function insertRole(name, message){
             lastStudent = role;
         }
     }
-    console.log(lastStudent.name)
-    console.log(lastStudent.position)
     
     if(!rolePlaced){
         await roleToInsert.setPosition(lastStudent.position);

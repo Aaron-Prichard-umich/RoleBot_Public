@@ -13,7 +13,7 @@ implement color selection for roles: ✅
 make roles slightly darker for veterans: 🚩
 implement promotion of students to veterans in endsemester cmd: ✅
 implement archiving channels in endsemester cmd: ✅
-Ensure descending alphanumeric order of roles when adding roles: 🚩
+Ensure alphanumeric order of roles when adding roles: 🚩
 */
 const { Client, GatewayIntentBits, EmbedBuilder, PermissionsBitField, Permissions, Guild, ChannelType, ActivityType, ActionRowBuilder, Events, StringSelectMenuBuilder, GuildMemberRoleManager, RoleSelectMenuBuilder, PermissionOverwrites, PermissionOverwriteManager, PermissionFlagsBits, Role, User, ButtonBuilder } = require(`discord.js`);
 const prefix = '!';
@@ -22,7 +22,8 @@ const client = new Client({
     intents: [
         GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent]
 });
-const courses = ["1", "2"]; //keep track of courses created for starting semester
+let optional = "";
+const courses = []; //keep track of courses created for starting semester
 let semester = "Spring 2023"; //global for semester.
 //ids for bot to react to. I don't think these need to be abstracted as they are easily optained by anyone in the server or extracted by discord.js code.
 const adminId = "378011482153025536"; //dr spradling id
@@ -56,18 +57,32 @@ client.on(Events.InteractionCreate, warningEvent => {
     if(!warningEvent.isButton() && (warningEvent.customId === 'cancel' || warningEvent.customId === 'continue')){
         return;
     }
-    if(warningEvent.customId === 'cancel'){ //delete the message if cancelled
-        warningEvent.reply({content: "Cancelled Promotion", ephemeral: true});
-        warningEvent.message.delete();
-        
-    }
-    else if(warningEvent.customId === 'continue'){ //promote all the students if continued
-        const server = warningEvent.guildId
-        for(const course of courses){
-           promoteStudents(server, course);
-           resetPermissions(server, course + " - " + semester);
+    const server = warningEvent.guildId
+    if(warningEvent.customId.endsWith("endsemester")){
+        if(warningEvent.customId === 'cancel endsemester'){ //delete the message if cancelled
+            warningEvent.reply({content: "Cancelled Promotion", ephemeral: true});
+            warningEvent.message.delete();
+            
         }
-        warningEvent.reply({content: "Promoting Students and Archiving Channels...", ephemeral: true});
+        else if(warningEvent.customId === 'continue endsemester'){ //promote all the students if continued
+            
+            for(const course of courses){
+            promoteStudents(server, course);
+            resetPermissions(server, course + " - " + semester);
+            }
+            warningEvent.reply({content: "Promoting Students and Archiving Channels...", ephemeral: true});
+        }
+    }
+    if(warningEvent.customId.endsWith("deletecourse")){
+        if(warningEvent.customId === 'cancel deletecourse'){ //delete the message if cancelled
+            warningEvent.reply({content: "Cancelled course deletion", ephemeral: true});
+            warningEvent.message.delete();
+            
+        }
+        else if(warningEvent.customId === 'continue deletecourse'){ //delete the course if continued
+            deleteCourse(server, optional);
+            warningEvent.reply({content: "course " + optional + " deleted", ephemeral: true});
+        }
     }
 })
 //command handler
@@ -76,6 +91,7 @@ client.on("messageCreate", (message) => {
     const args = message.content.slice(prefix.length).split(/ +/);
     const command = args.shift().toLowerCase(); //stores command/argument 0
     const name = args.shift(); //name of course/argument 1
+    const argTwo = args.shift(); //second argument for cohab or other multi-input commands
     if(command === "test"){
         message.channel.send("Test passed");
     }
@@ -84,7 +100,7 @@ client.on("messageCreate", (message) => {
             try{
                     let channelRole = null;
                     const roleName = name + " Students";
-                    const color = '#'+(Math.random()*0xFFFFFF<<0).toString(16);
+                    const color = '#' + (000000 + Math.random()*0xFFFFFF<<0).toString(16).slice(-6);
                     channelRole = createRole(roleName, color, message);
                     createRole(name + " Veterans", color, message);
                     
@@ -104,6 +120,7 @@ client.on("messageCreate", (message) => {
                     makeCourse("Announcements " + name, ChannelType.GuildText, message, channel);  //populate with standard channels
                     makeCourse("zoom-meeting-info " + name, ChannelType.GuildText, message, channel);
                     makeCourse("chat " + name, ChannelType.GuildText, message, channel);
+                    insertRole(name, message);
                 })});
                 
                 courses.push(name);
@@ -127,24 +144,45 @@ client.on("messageCreate", (message) => {
     }
 
     if(command === "endsemester" && (message.author.id === developerId || message.author.id === adminId)){
-        const warningEmbed = new EmbedBuilder()
-            .setColor("#FF0000")
-            .setTitle("Permanent Action")
-            .setDescription("This will promote all student roles and archive current semester categories and cannot be undone!");
+        warningEmbed(command, message, name);
+    }
 
-        const buttonRow = new ActionRowBuilder()
-            .addComponents(
-                new ButtonBuilder()
-                    .setCustomId('continue')
-                    .setLabel('Continue')
-                    .setStyle(1),
-                new ButtonBuilder()
-                    .setCustomId('cancel')
-                    .setLabel('Cancel')
-                    .setStyle(4)
-            );
+    if(command === "setsemester" && (message.author.id === developerId || message.author.id === adminId)){
+        let newSemester = name + " " + argTwo;
+        setSemester(newSemester);
+        message.channel.send("semester set to " + name + " " + argTwo)
+    }
 
-        message.channel.send({embeds: [warningEmbed], components: [buttonRow]});
+    if(command === "deletecourse" && (message.author.id === developerId || message.author.id === adminId)){
+        warningEmbed(command, message, name);
+    }
+    if(command === "cohab" && (message.author.id === developerId || message.author.id === adminId)){
+        const courseOne = message.guild.channels.cache.find((channel) => {
+            return channel.name === name + " - " + semester;
+        })
+        const courseOneRole = message.guild.roles.cache.find((role) => {
+            return role.name === name + " Students";
+        })
+        const courseTwoRole = message.guild.roles.cache.find((role) => {
+            return role.name === argTwo + " Students";
+        })
+        deleteCourse(message.guildId, argTwo);
+        courses.push(argTwo);
+        const permissions = [
+            {
+            id: courseTwoRole.id,
+            allow: [PermissionFlagsBits.ViewChannel],
+            },
+            {
+            id: courseOneRole.id,
+            allow: [PermissionFlagsBits.ViewChannel],
+            },
+        ]
+        courseOne.permissionOverwrites.set(permissions);
+        courseOne.setName(name + "/" + argTwo + " - " + semester);
+    }
+    if(command === "r"){
+        insertRole(name, message);
     }
 })
 
@@ -181,7 +219,7 @@ async function createRole(name, color, message){
     else{
         newRole = await message.guild.roles.cache.find(role => role.name === name);
     }
-       return newRole;
+        return newRole;
        
 }
 
@@ -223,5 +261,110 @@ async function resetPermissions( guildId, course) {
         await channel.permissionOverwrites.set(permissions);
       }
   }
+
+async function deleteCourse(guildId, course){
+    let courseToDelete = course + " - " + semester;
+    const guild = await client.guilds.fetch(guildId);
+    const category = guild.channels.cache.find(category => {
+        return category.name === courseToDelete;
+    });
+    channels = guild.channels.cache.filter(
+        (channel) => channel.parentId === category.id
+    );
+    for(const channel of channels.values()){
+        channel.delete()
+    }
+    category.delete();
+    
+    const index = courses.indexOf(course);
+
+    courses.splice(index, 1);
+}
+
+async function warningEmbed(command, message, name){
+    let flag = command;
+    optional = name;
+    const warningEmbed = new EmbedBuilder()
+    .setColor("#FF0000")
+    .setTitle(flag + " is a permanent action")
+    .setDescription("This cannot be undone!")
+
+const buttonRow = new ActionRowBuilder()
+    .addComponents(
+        new ButtonBuilder()
+            .setCustomId('continue ' + flag)
+            .setLabel('Continue')
+            .setStyle(1),
+        new ButtonBuilder()
+            .setCustomId('cancel ' + flag)
+            .setLabel('Cancel')
+            .setStyle(4)
+    );
+
+message.channel.send({embeds: [warningEmbed], components: [buttonRow]});
+}
+
+function setSemester(newSemester){
+    semester = newSemester;
+}
+
+async function insertRole(name, message){
+    const roleToInsert = await message.guild.roles.cache.find((role) => {
+        return role.name === name + " Students"; 
+    })
+    const veteranRole = await message.guild.roles.cache.find((role) => {
+        return role.name === name + " Veterans"; 
+    })
+    let rolePlaced = false;
+    await message.guild.roles.cache.sort((a, b) => b.position - a.position);
+    let roleNumberStr = "";
+    for(let i = 0; i<name.length; i++){
+        if(!isNaN(name[i])){
+            roleNumberStr += name[i];
+        }
+    }
+    let roleNumber = parseInt(roleNumberStr);
+    let firstStudent = -1;
+    for(let i = message.guild.roles.cache.size - 1; i >= 0; i--) {
+        const role = [...message.guild.roles.cache.values()][i];
+        console.log(role.name)
+        if(role.name.endsWith("Students") && role != roleToInsert){
+            firstStudent = role;
+            break; // Exit the loop after finding the first student role
+        }
+    }
+    if(firstStudent === -1){
+        return;
+    }
+    let counterpart = null;
+    let lastStudent = null;
+    for(let i = message.guild.roles.cache.size - 1; i >= 0; i--) {
+        const role = [...message.guild.roles.cache.values()][i];
+        if(role.position >= firstStudent.position && parseInt(role.name.match(/\d+/)) > roleNumber){
+            await roleToInsert.setPosition(role.position-1);
+            counterpart = role;
+            rolePlaced = true;
+            break;
+        }
+        if(role.name.endsWith("Students") && role != roleToInsert){
+            lastStudent = role;
+        }
+    }
+    console.log(lastStudent.name)
+    console.log(lastStudent.position)
+    
+    if(!rolePlaced){
+        await roleToInsert.setPosition(lastStudent.position);
+    }
+    if(counterpart){
+        let counterpartRole = await message.guild.roles.cache.find((role)=> {
+            return role.name === counterpart.name.replace("Students", "Veterans");
+        })
+        await veteranRole.setPosition(counterpartRole.position-1);
+    }
+    else{
+        await veteranRole.setPosition(firstStudent.position-1);
+    }
+}
 
 client.login(config.token);

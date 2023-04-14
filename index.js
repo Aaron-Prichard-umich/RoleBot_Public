@@ -31,8 +31,8 @@ let courses = []; //keep track of courses created for starting semester
 let roles = []; //separate array for roles in the event there are cohabitated courses
 let semester = "Spring 2023"; //global for semester.
 //ids for bot to react to. I don't think these need to be abstracted as they are easily optained by anyone in the server or extracted by discord.js code.
-const adminId = "378011482153025536"; //dr spradling id
-const developerId = "832403471026225163"; //developer id (mine right now)
+const adminId = ""; //dr spradling id
+const developerId = ""; //developer id (mine right now)
 client.on("ready", () => {
     console.log("Role Bot is online!");
     client.user.setActivity('Beep Boop', {type: ActivityType.Listening});

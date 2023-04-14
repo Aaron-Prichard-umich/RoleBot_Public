@@ -80,7 +80,6 @@ client.on(Events.InteractionCreate, warningEvent => {
             }
             
             warningEvent.reply({content: "Promoting Students and Archiving Channels...", ephemeral: true});
-            clearData();
         }
     }
     if(warningEvent.customId.endsWith("deletecourse")){
